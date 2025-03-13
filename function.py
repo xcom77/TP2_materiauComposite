@@ -212,10 +212,10 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     """
     ply = len(angles)
    
-    S = matrice_orthotrope_reduite(E1=E1, E2=E2, G12=G12, V12=V12)
+    S, Q = matrice_orthotrope_reduite(E1=E1, E2=E2, G12=G12, v12=V12)
      
     Q = np.linalg.inv(S)
-    
+
     A = np.zeros((3, 3))
     B = np.zeros((3, 3))
     D = np.zeros((3, 3))
@@ -223,7 +223,7 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     j = 0
     k = 0
     
-    for i in np.arange(h / ply, h + h / ply, h / ply):
+    for i in np.arange(h, h * ply + h, h):
         theta = np.deg2rad(angles[j])
         c = np.cos(theta)
         s = np.sin(theta)
@@ -251,5 +251,5 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     
     B *= 0.5
     D *= 1/3
-    
+    print(k)
     return A, B, D
