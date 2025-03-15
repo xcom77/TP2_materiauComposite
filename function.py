@@ -356,22 +356,86 @@ def diluted_inclusion_localization(proprietes_mecanique_matrice,proprietes_mecan
     delta_C = C_l - C_m
     print("Symétrie de delta_C:", check_symmetry(delta_C))
 
-    print()
 
-    
-    test2 = S_esh @ S_m 
-    test = test2 @ delta_C
+    V1 = S_esh @ S_m
+    V1 = 0.5 * (V1 + V1.T)  # Correction numérique
 
-    print("Symétrie de S_esh @ S_m :", check_symmetry(test2), "val : ", test2)
-    print("Symétrie de test2 @ delta_C:", check_symmetry(test), "val :", test)
+    V2 = V1 @ delta_C
+    V2 = 0.5 * (V2 + V2.T)  # Correction numérique
+
+    print("Symétrie de S_esh @ S_m :", check_symmetry(V1))
+    print("Symétrie de test2 @ delta_C:", check_symmetry(V2))
 
     # Calcul du tenseur de localisation A_dil
-    A_dil = np.linalg.inv(np.eye(6) + S_esh @ S_m @ delta_C)
+    A_dil = np.linalg.inv(np.eye(6) + V2)
 
     A_dil = 0.5 * (A_dil + A_dil.T)  # Forcer la symétrie
 
     A_dil = np.round(A_dil,4)
-    return A_dil
+
+    return C_m, C_l, A_dil
 
 
+def homogenized_rigidity_dilution(C_m, C_l, A_I, V_I):
+    """
+    Calcule la matrice de rigidité homogénéisée C_hom selon la formule :
 
+        C_hom = C_m + V_I * (C_l - C_m) @ A_I
+
+    :param C_m: Matrice de rigidité du matériau de la matrice (6x6)
+    :param C_l: Matrice de rigidité du matériau de l'inclusion (6x6)
+    :param A_I: Tenseur de localisation de l'inclusion (6x6)
+    :param V_I: Fraction volumique de l'inclusion (scalaire)
+    :return: Matrice C_hom (6x6) de rigidité homogénéisée
+    """
+    # Calcul de C^hom
+    delta_C = C_l - C_m  # (C^I - C^M)
+    C_hom = C_m + V_I * (delta_C @ A_I)  # C^hom = C^M + V_I * (C^I - C^M) @ A^I
+
+    C_hom = 0.5 * (C_hom + C_hom.T)  # Rend la matrice symétrique
+
+    return C_hom
+
+def rule_of_mixtures(Vf, Ef_L, Ef_T, Gf_LT, vf_LT, vf_TT, Em, vm):
+    """
+    Calcule les propriétés effectives d'un matériau composite en utilisant la règle des mélanges.
+    Si Gm (module de cisaillement de la matrice) n'est pas fourni, il est estimé avec Gm = Em / (2 * (1 + vm))
+
+    :param Vf: Fraction volumique des fibres (entre 0 et 1)
+    :param Ef_L: Module de Young longitudinal des fibres (GPa)
+    :param Ef_T: Module de Young transverse des fibres (GPa)
+    :param Gf_LT: Module de cisaillement in-plane des fibres (GPa)
+    :param vf_LT: Coefficient de Poisson in-plane des fibres
+    :param vf_TT: Coefficient de Poisson transverse des fibres
+    :param Em: Module de Young de la matrice (GPa)
+    :param vm: Coefficient de Poisson de la matrice
+    :return: Dictionnaire contenant les modules effectifs du composite
+    """
+
+    # Calcul du module de cisaillement de la matrice
+    Gm = Em / (2 * (1 + vm))
+
+    # Module longitudinal E_L
+    EL = Vf * Ef_L + (1 - Vf) * Em
+
+    # Coefficient de Poisson in-plane ν_LT
+    vLT = Vf * vf_LT + (1 - Vf) * vm
+
+    # Coefficient de Poisson transverse-transverse ν_TT
+    vTT = Vf * vf_TT + (1 - Vf) * vm
+
+    # Module transverse E_T
+    ET = 1 / (Vf / Ef_T + (1 - Vf) / Em)
+
+    # Module de cisaillement in-plane G_LT
+    GLT = 1 / (Vf / Gf_LT + (1 - Vf) / Gm)
+
+    # Retourne un dictionnaire avec les propriétés calculées
+    return {
+        "E_L": EL,
+        "ν_LT": vLT,
+        "ν_TT": vTT,
+        "E_T": ET,
+        "G_LT": GLT,
+        "V_i": Vf
+    }

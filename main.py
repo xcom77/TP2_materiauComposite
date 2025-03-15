@@ -37,4 +37,24 @@ S_matrix = eshelby_tensor(nu_M_example)
 print("Tenseur d'Eshelby pour ν^M =", nu_M_example)
 print(S_matrix)
 
-print(diluted_inclusion_localization(proprietes_mecanique_fibre=[218,22,40,0.22,0.33],proprietes_mecanique_matrice=[3.6,0.39]))
+C_m, C_l, Adil = diluted_inclusion_localization(proprietes_mecanique_fibre=[218,22,40,0.22,0.33],proprietes_mecanique_matrice=[3.6,0.39])
+
+C_h = homogenized_rigidity_dilution(C_m, C_l, Adil,V_I=0.4)
+
+print(C_h)
+print(dec_trans_iso(C_h))
+
+
+Vf = 0.4     # Fraction volumique de fibre (exemple)
+Ef_L = 218    # GPa (Module de Young longitudinal des fibres)
+Ef_T = 22     # GPa (Module de Young transverse des fibres)
+Gf_LT = 40    # GPa (Module de cisaillement des fibres)
+vf_LT = 0.22  # Coefficient de Poisson in-plane des fibres
+vf_TT = 0.3   # Coefficient de Poisson transverse-transverse des fibres
+Em = 3.6      # GPa (Module de Young de la matrice)
+vm = 0.39     # Coefficient de Poisson de la matrice
+
+proprietes_composite = rule_of_mixtures(Vf, Ef_L, Ef_T, Gf_LT, vf_LT, vf_TT, Em, vm)
+
+for prop, valeur in proprietes_composite.items():
+    print(f"{prop}: {valeur:.4f} GPa")
