@@ -30,3 +30,11 @@ A, B, D = calcul_matrices_ABD(E1=E1, E2=E2,G12=G12,V12=V12,angles=angle,h=h)
 print("A3 : ",A)
 print("B3 : ",B)
 print("D3 : ",D)
+
+
+nu_M_example = 0.3
+S_matrix = eshelby_tensor(nu_M_example)
+print("Tenseur d'Eshelby pour ν^M =", nu_M_example)
+print(S_matrix)
+
+diluted_inclusion_localization(proprietes_mecanique_fibre=[218,22,40,0.22,0.33],proprietes_mecanique_matrice=[3.6,0.39])

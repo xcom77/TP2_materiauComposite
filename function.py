@@ -1,6 +1,30 @@
 import numpy as np
 
-def matrice_iso_transversale(El, Et, Vlt, Vtt, Glt):
+
+def auto_matrix(*args):
+    """
+    Sélectionne et appelle la fonction appropriée en fonction du nombre d'arguments donnés.
+
+    :param args: Liste des paramètres donnés (peut être de taille variable)
+    :return: (S, C) matrices de compliance et de rigidité
+    """
+    nb_args = len(args)
+
+    if nb_args == 2:  # Matériau isotrope
+        return matrice_isotrope(*args)
+    
+    elif nb_args == 5:  # Matériau isotrope transversal
+        return matrice_iso_transversale(*args)
+    
+    elif nb_args == 9:  # Matériau orthotrope
+        return matrice_orthotrope(*args)
+    
+    else:
+        raise ValueError(f"Nombre d'arguments invalide : {nb_args}. "
+                         "Attendu : 2 (isotrope), 5 (isotrope transversal), ou 9 (orthotrope).")
+
+
+def matrice_iso_transversale(El, Et, Glt, Vlt, Vtt):
     """
     Calcule les matrices de compliance S et de rigidité C pour un matériau isotrope transversal.
     
@@ -97,7 +121,7 @@ def matrice_isotrope(E, v):
     
     return S, C
 
-def matrice_orthotrope(E1, E2, E3, v12, v13, v23, G12, G23, G31):
+def matrice_orthotrope(E1, E2, E3, G12, G23, G31, v12, v13, v23):
     """
     Calcule les matrices de compliance S et de rigidité C pour un matériau orthotrope.
     
@@ -272,3 +296,55 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     D = np.round(D, 4)
 
     return A, B, D
+
+def eshelby_tensor(nu_M):
+    """
+    Calcule la matrice du tenseur d'Eshelby pour une inclusion cylindrique
+    dans un matériau isotrope caractérisé par le coefficient de Poisson nu_M.
+
+    :param nu_M: Coefficient de Poisson du matériau isotrope
+    :return: Matrice 6x6 du tenseur d'Eshelby
+    """
+    # Initialisation d'une matrice 6x6 remplie de zéros
+    S = np.zeros((6, 6))
+
+    # Calcul des valeurs à partir des formules données
+    S[1, 1] = S[2, 2] = (5 - 4 * nu_M) / (8 * (1 - nu_M))
+    S[1, 2] = S[2, 1] = (4 * nu_M - 1) / (8 * (1 - nu_M))
+    S[1, 0] = S[2, 0] = nu_M / (2 * (1 - nu_M))
+    S[3, 3] = (3 - 4 * nu_M) / (4 * (1 - nu_M))
+    S[4, 4] = S[5, 5] = 1 / 2
+
+    S = np.round(S,4)
+
+    return S
+
+
+def diluted_inclusion_localization(proprietes_mecanique_matrice,proprietes_mecanique_fibre):
+    """
+    Calcule le tenseur de localisation pour une inclusion diluée en utilisant la formule donnée.
+    
+    :param proprietes_mecanique_matrice: Paramètres mécaniques de la matrice (E, v, etc.)
+    :param proprietes_mecanique_fibre: Paramètres mécaniques de la fibre (E, v, etc.)
+    :return: Matrice A_dil du tenseur de localisation
+    """
+    # Calcul des matrices de compliance (S) et de rigidité (C) pour la matrice et la fibre
+    S_m, C_m = auto_matrix(*proprietes_mecanique_matrice)  # Matrice
+    S_l, C_l = auto_matrix(*proprietes_mecanique_fibre)    # Fibre
+
+    # Calcul du tenseur d'Eshelby
+    S_esh = eshelby_tensor(proprietes_mecanique_matrice[1])  
+
+    # Calcul du terme (C^M)^-1
+    S_m = np.linalg.inv(C_m)
+
+    # Calcul du terme (C^I - C^M)
+    delta_C = C_l - C_m
+
+    # Calcul du tenseur de localisation A_dil
+    A_dil = np.linalg.inv(np.eye(6) + np.einsum('ijkl,klmn,mnop->ijop', S_esh, S_m, delta_C))
+
+    return A_dil
+
+
+
