@@ -311,13 +311,14 @@ def eshelby_tensor(nu_M):
     # Calcul des valeurs à partir des formules données
     S[1, 1] = S[2, 2] = (5 - 4 * nu_M) / (8 * (1 - nu_M))
     S[1, 2] = S[2, 1] = (4 * nu_M - 1) / (8 * (1 - nu_M))
-    S[1, 0] = S[2, 0] = nu_M / (2 * (1 - nu_M))
+    S[1, 0] = S[2, 0] = S[0, 1] = S[0, 2]= nu_M / (2 * (1 - nu_M))
     S[3, 3] = (3 - 4 * nu_M) / (4 * (1 - nu_M))
     S[4, 4] = S[5, 5] = 1 / 2
 
     S = np.round(S,4)
 
     return S
+
 
 
 def diluted_inclusion_localization(proprietes_mecanique_matrice,proprietes_mecanique_fibre):
@@ -332,8 +333,19 @@ def diluted_inclusion_localization(proprietes_mecanique_matrice,proprietes_mecan
     S_m, C_m = auto_matrix(*proprietes_mecanique_matrice)  # Matrice
     S_l, C_l = auto_matrix(*proprietes_mecanique_fibre)    # Fibre
 
+    def check_symmetry(matrix, tol=1e-6):
+        return np.allclose(matrix, matrix.T, atol=tol)
+
+    print("Symétrie de C_m:", check_symmetry(C_m))
+    print("Symétrie de S_m:", check_symmetry(S_m))
+    print("Symétrie de C_l:", check_symmetry(C_l))
+    
+
     # Calcul du tenseur d'Eshelby
     S_esh = eshelby_tensor(proprietes_mecanique_matrice[1])  
+
+    print("Symétrie de S_esh:", check_symmetry(S_esh))
+
 
     # Calcul du terme (C^M)^-1
     S_m = np.linalg.inv(C_m)
@@ -341,9 +353,24 @@ def diluted_inclusion_localization(proprietes_mecanique_matrice,proprietes_mecan
     # Calcul du terme (C^I - C^M)
     delta_C = C_l - C_m
 
-    # Calcul du tenseur de localisation A_dil
-    A_dil = np.linalg.inv(np.eye(6) + np.einsum('ijkl,klmn,mnop->ijop', S_esh, S_m, delta_C))
+    delta_C = C_l - C_m
+    print("Symétrie de delta_C:", check_symmetry(delta_C))
 
+    print()
+
+    
+    test2 = S_esh @ S_m 
+    test = test2 @ delta_C
+
+    print("Symétrie de S_esh @ S_m :", check_symmetry(test2), "val : ", test2)
+    print("Symétrie de test2 @ delta_C:", check_symmetry(test), "val :", test)
+
+    # Calcul du tenseur de localisation A_dil
+    A_dil = np.linalg.inv(np.eye(6) + S_esh @ S_m @ delta_C)
+
+    A_dil = 0.5 * (A_dil + A_dil.T)  # Forcer la symétrie
+
+    A_dil = np.round(A_dil,4)
     return A_dil
 
 

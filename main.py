@@ -37,4 +37,4 @@ S_matrix = eshelby_tensor(nu_M_example)
 print("Tenseur d'Eshelby pour ν^M =", nu_M_example)
 print(S_matrix)
 
-diluted_inclusion_localization(proprietes_mecanique_fibre=[218,22,40,0.22,0.33],proprietes_mecanique_matrice=[3.6,0.39])
+print(diluted_inclusion_localization(proprietes_mecanique_fibre=[218,22,40,0.22,0.33],proprietes_mecanique_matrice=[3.6,0.39]))
