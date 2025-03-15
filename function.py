@@ -197,7 +197,6 @@ def proprietes_mecaniques_apparentes(S_global):
     return E11, E22, nu12, G12
 
 
-
 def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     """
     Calcule les matrices A, B et D pour un matériau stratifié en fonction des angles donnés.
@@ -207,51 +206,69 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     :param G12: Module de cisaillement (GPa)
     :param V12: Coefficient de Poisson
     :param angles: Liste des angles des plis en degrés
-    :param h: Épaisseur totale du stratifié
-    :return: (A, B, D) matrices de rigidité
+    :param h: Épaisseur d’un pli individuel
+    :return: (A, B, D) matrices de rigidité arrondies à 4 décimales
     """
-    ply = len(angles)
-   
-    S, Q = matrice_orthotrope_reduite(E1=E1, E2=E2, G12=G12, v12=V12)
-     
-    Q = np.linalg.inv(S)
+    ply = len(angles)  # Nombre de plis
 
-    A = np.zeros((3, 3))
-    B = np.zeros((3, 3))
-    D = np.zeros((3, 3))
-    
-    j = 0
-    k = 0
-    
-    for i in np.arange(h, h * ply + h, h):
-        theta = np.deg2rad(angles[j % len(angles)])
-        c = np.cos(theta)
-        s = np.sin(theta)
+    S, Q = matrice_orthotrope_reduite(E1=E1, E2=E2, G12=G12, v12=V12)
+    Q = np.linalg.inv(S).astype(np.float64)
+
+    A = np.zeros((3, 3), dtype=np.float64)
+    B = np.zeros((3, 3), dtype=np.float64)
+    D = np.zeros((3, 3), dtype=np.float64)
+
+    for k in range(ply):
+        theta = np.deg2rad(angles[k])  # Correction indexation
         
+        # ⚠️ Correction de cos et sin pour 0° et 90° 
+        if np.isclose(theta % (np.pi), 0):  # 0° ou 180°
+            c, s = 1.0, 0.0
+        elif np.isclose(theta % (np.pi), np.pi / 2):  # 90° ou 270°
+            c, s = 0.0, 1.0
+        else:
+            c, s = np.cos(theta), np.sin(theta)
+
         T = np.array([
             [c**2, s**2, -2*s*c],
             [s**2, c**2, 2*s*c],
             [s*c, -s*c, c**2 - s**2]
-        ])
+        ], dtype=np.float64)
         
         T1 = np.array([
             [c**2, s**2, s*c],
             [s**2, c**2, -s*c],
             [-2*s*c, 2*s*c, c**2 - s**2]
-        ])
+        ], dtype=np.float64)
         
-        Q_global = T1 @ Q @ T
-        
-        A += (i - (i - h)) * Q_global
-        B += ((i**2) - (i - h)**2) * Q_global
-        D += ((i**3) - (i - h)**3) * Q_global
-        
-        j += 1
-        k += 1
-    
+        # Produit matriciel avec np.dot() pour éviter les erreurs
+        Q_global = np.dot(np.dot(T1, Q), T)
+
+        Q_global = np.round(Q_global, 3)
+
+        # Vérification des matrices pour les angles critiques
+        #print(f"Angle: {np.rad2deg(theta)}°")
+        #print(f"Q_global:\n{Q_global}\n")
+
+        z_k = k * h  # Position inférieure du pli
+        z_k1 = (k + 1) * h  # Position supérieure du pli
+
+        A += (z_k1 - z_k) * Q_global
+        B += (z_k1**2 - z_k**2) * Q_global
+        D += (z_k1**3 - z_k**3) * Q_global
+
+        # Arrondi après chaque itération
+        A = np.round(A, 4)
+        B = np.round(B, 4)
+        D = np.round(D, 4)
+
+    # Application des coefficients finaux APRÈS l’arrondi
     B *= 0.5
     D *= 1/3
-    print(k)
+
+    # Arrondi final
+    A = np.round(A, 4)
+    B = np.round(B, 4)
+    D = np.round(D, 4)
+
     return A, B, D
-
-

@@ -22,7 +22,7 @@ print("A2 : ",A)
 print("B2 : ",B)
 print("D2 : ",D)
 
-angle = [45,0,-45,90,90,-40,0,45]
+angle = [45,0,-45,90,90,-45,0,45]
 h=0.256
 A, B, D = calcul_matrices_ABD(E1=E1, E2=E2,G12=G12,V12=V12,angles=angle,h=h)
 
