@@ -224,7 +224,7 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     k = 0
     
     for i in np.arange(h, h * ply + h, h):
-        theta = np.deg2rad(angles[j])
+        theta = np.deg2rad(angles[j % len(angles)])
         c = np.cos(theta)
         s = np.sin(theta)
         
@@ -242,9 +242,9 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
         
         Q_global = T1 @ Q @ T
         
-        A += (i - (i - h / ply)) * Q_global
-        B += ((i**2) - (i - h / ply)**2) * Q_global
-        D += ((i**3) - (i - h / ply)**3) * Q_global
+        A += (i - (i - h)) * Q_global
+        B += ((i**2) - (i - h)**2) * Q_global
+        D += ((i**3) - (i - h)**3) * Q_global
         
         j += 1
         k += 1
@@ -253,3 +253,5 @@ def calcul_matrices_ABD(E1, E2, G12, V12, angles, h):
     D *= 1/3
     print(k)
     return A, B, D
+
+
